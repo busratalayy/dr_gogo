@@ -1,4 +1,10 @@
+import 'package:dr_gogo/screens/health_vaccine_screen.dart';
+import 'package:dr_gogo/screens/rest_monitoring_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:dr_gogo/screens/pet_profile_screen.dart';
+import 'package:dr_gogo/screens/activity_screen.dart';
+import  'package:dr_gogo/screens/food_water_screen.dart';
+
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -78,7 +84,49 @@ class DashboardScreen extends StatelessWidget {
                     ),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(24),
-                      onTap: () {},
+                      onTap: () {
+                        if (item.title == "Pet Profile") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PetProfileScreen(),
+                            ),
+                          );
+                        }
+                        else if (item.title == "Activity") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                              const ActivityScreen(),
+                            ),
+                          );
+                        }
+                        else if (item.title == "Food & Water") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const FoodWaterScreen(),
+                            ),
+                          );
+                        }
+                        else if (item.title == "Health & Vaccine") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HealthVaccineScreen(),
+                            ),
+                          );
+                        }
+                        else if (item.title == "Rest Monitor") {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RestMonitoringScreen(),
+                            ),
+                          );
+                        }
+                      },
                       child: Padding(
                         padding: const EdgeInsets.all(18),
                         child: Column(
