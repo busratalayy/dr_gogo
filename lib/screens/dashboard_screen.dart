@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:dr_gogo/screens/pet_profile_screen.dart';
 import 'package:dr_gogo/screens/activity_screen.dart';
 import  'package:dr_gogo/screens/food_water_screen.dart';
+import 'package:dr_gogo/screens/location_screen.dart';
 
 
 class DashboardScreen extends StatelessWidget {
@@ -123,6 +124,14 @@ class DashboardScreen extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const RestMonitoringScreen(),
+                            ),
+                          );
+                        }
+                        else if(item.title == "Location"){
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:(context) => const LocationScreen(),
                             ),
                           );
                         }
