@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 class ActivityScreen extends StatelessWidget {
   const ActivityScreen({super.key});
 
@@ -26,7 +27,8 @@ class ActivityScreen extends StatelessWidget {
         foregroundColor: textColor,
         elevation: 0,
       ),
-
+      bottomNavigationBar:
+      const BottomNavBar(currentIndex: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
 
@@ -207,9 +209,8 @@ class ActivityScreen extends StatelessWidget {
 
       child: Column(
         children: [
-
-          const Icon(
-            Icons.directions_run,
+          const FaIcon(
+            FontAwesomeIcons.dog,
             color: Colors.white,
             size: 50,
           ),

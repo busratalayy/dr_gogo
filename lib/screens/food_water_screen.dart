@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/food_water_service.dart';
+import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 
 class FoodWaterScreen extends StatefulWidget {
   const FoodWaterScreen({super.key});
@@ -80,7 +81,8 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
         foregroundColor: textColor,
         elevation: 0,
       ),
-
+      bottomNavigationBar:
+      const BottomNavBar(currentIndex: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/rest_monitoring_service.dart';
+import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 
 class RestMonitoringScreen extends StatelessWidget {
   const RestMonitoringScreen({super.key});
@@ -49,7 +50,8 @@ class RestMonitoringScreen extends StatelessWidget {
 
         elevation: 0,
       ),
-
+      bottomNavigationBar:
+      const BottomNavBar(currentIndex: 0),
       body: SingleChildScrollView(
 
         padding: const EdgeInsets.all(20),

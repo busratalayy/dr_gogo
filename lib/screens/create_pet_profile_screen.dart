@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
+import '../controllers/profile_controller.dart';
+import 'dashboard_screen.dart';
 
-import '../controllers/auth_controller.dart';
-import 'login_screen.dart';
-
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+class CreatePetProfileScreen extends StatefulWidget {
+  const CreatePetProfileScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  State<CreatePetProfileScreen> createState() => _CreatePetProfileScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _CreatePetProfileScreenState extends State<CreatePetProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  final AuthController _authController = AuthController();
+  final ProfileController _profileController = ProfileController();
+  final TextEditingController petNameController = TextEditingController();
+  final TextEditingController breedController = TextEditingController();
+  final TextEditingController ageController = TextEditingController();
+  final TextEditingController weightController = TextEditingController();
 
-  final TextEditingController fullNameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-  TextEditingController();
+  String selectedSpecies = "Dog";
+  String selectedGender = "Male";
 
-  bool isPasswordVisible = false;
-  bool isConfirmPasswordVisible = false;
   bool isLoading = false;
 
   static const Color backgroundColor = Color(0xFFF7F4EF);
@@ -32,44 +30,46 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    fullNameController.dispose();
-    emailController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
+    petNameController.dispose();
+    breedController.dispose();
+    ageController.dispose();
+    weightController.dispose();
     super.dispose();
   }
 
-  Future<void> registerUser() async {
+  Future<void> savePetProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
       isLoading = true;
     });
 
-    final String? result = await _authController.registerOwner(
-      fullName: fullNameController.text,
-      email: emailController.text,
-      password: passwordController.text,
-      confirmPassword: confirmPasswordController.text,
+    final result = await _profileController.savePetProfile(
+      name: petNameController.text,
+      type: selectedSpecies,
+      breed: breedController.text,
+      age: ageController.text,
+      weight: weightController.text,
+      gender: selectedGender,
     );
-
-    if (!mounted) return;
 
     setState(() {
       isLoading = false;
     });
 
+    if (!mounted) return;
+
     if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Registration successful! Please login."),
+          content: Text("Pet profile saved successfully!"),
         ),
       );
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => const LoginScreen(),
+          builder: (_) => const DashboardScreen(),
         ),
       );
     } else {
@@ -79,15 +79,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
     }
-  }
-
-  void goToLogin() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
-    );
   }
 
   @override
@@ -102,19 +93,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
                 Center(
                   child: Container(
-                    width: 92,
-                    height: 92,
+                    width: 96,
+                    height: 96,
                     decoration: BoxDecoration(
                       color: mainColor.withOpacity(0.14),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.pets,
-                      size: 48,
+                      size: 50,
                       color: mainColor,
                     ),
                   ),
@@ -123,9 +114,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 28),
 
                 const Text(
-                  "Create Account",
+                  "Create Pet Profile",
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 31,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
@@ -134,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 8),
 
                 const Text(
-                  "Create your owner account to start monitoring your pet.",
+                  "Add your pet’s basic information to personalize health monitoring.",
                   style: TextStyle(
                     fontSize: 15,
                     color: subtitleColor,
@@ -142,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 28),
 
                 Container(
                   padding: const EdgeInsets.all(22),
@@ -160,12 +151,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(
                     children: [
                       buildTextField(
-                        controller: fullNameController,
-                        label: "Full Name",
-                        icon: Icons.person_outline,
+                        controller: petNameController,
+                        label: "Pet Name",
+                        icon: Icons.badge_outlined,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return "Please enter your full name";
+                            return "Please enter your pet's name";
                           }
                           return null;
                         },
@@ -173,17 +164,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 18),
 
+                      buildDropdown(
+                        label: "Species",
+                        icon: Icons.pets,
+                        value: selectedSpecies,
+                        items: const ["Dog", "Cat"],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedSpecies = value!;
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 18),
+
                       buildTextField(
-                        controller: emailController,
-                        label: "Email",
-                        icon: Icons.email_outlined,
-                        keyboardType: TextInputType.emailAddress,
+                        controller: breedController,
+                        label: "Breed",
+                        icon: Icons.category_outlined,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return "Please enter your email";
-                          }
-                          if (!value.contains("@")) {
-                            return "Please enter a valid email";
+                            return "Please enter breed";
                           }
                           return null;
                         },
@@ -191,65 +192,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                       const SizedBox(height: 18),
 
-                      buildTextField(
-                        controller: passwordController,
-                        label: "Password",
-                        icon: Icons.lock_outline,
-                        obscureText: !isPasswordVisible,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            isPasswordVisible
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: subtitleColor,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              isPasswordVisible = !isPasswordVisible;
-                            });
-                          },
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please enter your password";
-                          }
-                          if (value.length < 6) {
-                            return "Password must be at least 6 characters";
-                          }
-                          return null;
+                      buildDropdown(
+                        label: "Gender",
+                        icon: Icons.wc,
+                        value: selectedGender,
+                        items: const ["Male", "Female"],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedGender = value!;
+                          });
                         },
                       ),
 
                       const SizedBox(height: 18),
 
-                      buildTextField(
-                        controller: confirmPasswordController,
-                        label: "Confirm Password",
-                        icon: Icons.lock_reset,
-                        obscureText: !isConfirmPasswordVisible,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            isConfirmPasswordVisible
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: subtitleColor,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: buildTextField(
+                              controller: ageController,
+                              label: "Age",
+                              icon: Icons.cake_outlined,
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return "Required";
+                                }
+                                return null;
+                              },
+                            ),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              isConfirmPasswordVisible =
-                              !isConfirmPasswordVisible;
-                            });
-                          },
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return "Please confirm your password";
-                          }
-                          if (value != passwordController.text) {
-                            return "Passwords do not match";
-                          }
-                          return null;
-                        },
+
+                          const SizedBox(width: 14),
+
+                          Expanded(
+                            child: buildTextField(
+                              controller: weightController,
+                              label: "Weight (kg)",
+                              icon: Icons.monitor_weight_outlined,
+                              keyboardType: TextInputType.number,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return "Required";
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 28),
@@ -258,7 +248,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         width: double.infinity,
                         height: 56,
                         child: ElevatedButton(
-                          onPressed: isLoading ? null : registerUser,
+                          onPressed: isLoading ? null : savePetProfile,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: mainColor,
                             foregroundColor: Colors.white,
@@ -277,7 +267,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           )
                               : const Text(
-                            "Register",
+                            "Save Pet Profile",
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
@@ -287,28 +277,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 24),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Already have an account?",
-                      style: TextStyle(color: subtitleColor),
-                    ),
-                    TextButton(
-                      onPressed: goToLogin,
-                      child: const Text(
-                        "Login",
-                        style: TextStyle(
-                          color: mainColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -322,20 +290,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    bool obscureText = false,
-    Widget? suffixIcon,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
-      obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
       style: const TextStyle(color: textColor),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: mainColor),
-        suffixIcon: suffixIcon,
         labelText: label,
         labelStyle: const TextStyle(color: subtitleColor),
         filled: true,
@@ -346,6 +310,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         errorStyle: const TextStyle(fontSize: 12),
       ),
+    );
+  }
+
+  Widget buildDropdown({
+    required String label,
+    required IconData icon,
+    required String value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: mainColor),
+        labelText: label,
+        labelStyle: const TextStyle(color: subtitleColor),
+        filled: true,
+        fillColor: backgroundColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      items: items
+          .map(
+            (item) => DropdownMenuItem<String>(
+          value: item,
+          child: Text(item),
+        ),
+      )
+          .toList(),
     );
   }
 }

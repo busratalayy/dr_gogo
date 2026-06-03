@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 
 class PetProfileScreen extends StatefulWidget {
   const PetProfileScreen({super.key});
@@ -40,7 +41,8 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         foregroundColor: textColor,
         elevation: 0,
       ),
-
+      bottomNavigationBar:
+      const BottomNavBar(currentIndex: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
 

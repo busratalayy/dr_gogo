@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 
 class HealthVaccineScreen extends StatefulWidget {
   const HealthVaccineScreen({super.key});
@@ -97,7 +98,8 @@ class _HealthVaccineScreenState
           ),
         ],
       ),
-
+      bottomNavigationBar:
+      const BottomNavBar(currentIndex: 0),
       body: Padding(
 
         padding: const EdgeInsets.all(20),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 
 class LocationScreen extends StatelessWidget {
   const LocationScreen({super.key});
@@ -24,7 +25,8 @@ class LocationScreen extends StatelessWidget {
 
         centerTitle: true,
       ),
-
+      bottomNavigationBar:
+      const BottomNavBar(currentIndex: 0),
       body: Stack(
 
         children: [
