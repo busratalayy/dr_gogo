@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/food_water_service.dart';
 import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 
+import '../controllers/profile_controller.dart';
+import '../models/pet_model.dart';
+
 class FoodWaterScreen extends StatefulWidget {
   const FoodWaterScreen({super.key});
 
@@ -10,16 +13,19 @@ class FoodWaterScreen extends StatefulWidget {
 }
 
 class _FoodWaterScreenState extends State<FoodWaterScreen> {
+  final ProfileController _profileController = ProfileController();
+
   static const Color backgroundColor = Color(0xFFF7F4EF);
   static const Color cardColor = Color(0xFFFDFDFB);
   static const Color textColor = Color(0xFF1F1F1F);
   static const Color subtitleColor = Color(0xFF6E6E6E);
   static const Color accentColor = Color(0xFF6FAFA6);
 
-  final TextEditingController foodNameController = TextEditingController();
+
   final TextEditingController kcalController = TextEditingController();
 
-  double petWeight = 20.0; // Şimdilik fake pet weight
+  late Future<PetModel?> _petFuture;
+
   String selectedActivity = "Normal";
 
   double dailyCalories = 0;
@@ -28,14 +34,26 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
 
   bool isCalculated = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _petFuture = _profileController.getCurrentPet();
+  }
+
+  @override
+  void dispose() {
+    kcalController.dispose();
+    super.dispose();
+  }
+
   double getActivityFactor() {
     if (selectedActivity == "Low") return 1.2;
     if (selectedActivity == "Normal") return 1.6;
     return 2.0;
   }
 
-  void calculatePlan() {
-    double kcalPerGram = double.tryParse(kcalController.text) ?? 0;
+  void calculatePlan(PetModel pet) {
+    final double kcalPerGram = double.tryParse(kcalController.text) ?? 0;
 
     if (kcalPerGram <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,7 +65,7 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
     }
 
     dailyCalories = FoodWaterService.calculateDailyCalories(
-      weight: petWeight,
+      weight: pet.weight,
       activityFactor: getActivityFactor(),
     );
 
@@ -56,7 +74,7 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
       kcalPerGram: kcalPerGram,
     );
 
-    waterNeed = FoodWaterService.calculateWaterNeed(petWeight);
+    waterNeed = FoodWaterService.calculateWaterNeed(pet.weight);
 
     setState(() {
       isCalculated = true;
@@ -81,86 +99,123 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
         foregroundColor: textColor,
         elevation: 0,
       ),
-      bottomNavigationBar:
-      const BottomNavBar(currentIndex: 0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
 
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
 
-          children: [
-            const Text(
-              "Nutrition Plan 🍖",
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: textColor,
+      body: FutureBuilder<PetModel?>(
+        future: _petFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: accentColor,
               ),
-            ),
+            );
+          }
 
-            const SizedBox(height: 6),
-
-            const Text(
-              "Estimate your pet’s daily food and water needs.",
-              style: TextStyle(
-                color: subtitleColor,
-                fontSize: 14,
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text(
+                "An error occurred while loading pet information.",
+                style: TextStyle(color: textColor),
               ),
-            ),
+            );
+          }
 
-            const SizedBox(height: 26),
+          final pet = snapshot.data;
 
-            buildPetInfoCard(),
-
-            const SizedBox(height: 22),
-
-            buildInputCard(),
-
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              height: 58,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                onPressed: calculatePlan,
-                child: const Text(
-                  "Calculate Plan",
+          if (pet == null) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  "No pet profile found. Please create a pet profile first.",
+                  textAlign: TextAlign.center,
                   style: TextStyle(
+                    color: textColor,
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
                   ),
                 ),
               ),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Nutrition Plan 🍖",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                const Text(
+                  "Estimate your pet’s daily food and water needs.",
+                  style: TextStyle(
+                    color: subtitleColor,
+                    fontSize: 14,
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                buildPetInfoCard(pet),
+
+                const SizedBox(height: 22),
+
+                buildInputCard(),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 58,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    onPressed: () => calculatePlan(pet),
+                    child: const Text(
+                      "Calculate Plan",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                if (isCalculated) buildResultSection(),
+
+                const SizedBox(height: 18),
+
+                buildNoteCard(),
+              ],
             ),
-
-            const SizedBox(height: 26),
-
-            if (isCalculated) buildResultSection(),
-
-            const SizedBox(height: 18),
-
-            buildNoteCard(),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget buildPetInfoCard() {
+  Widget buildPetInfoCard(PetModel pet) {
     return Container(
       padding: const EdgeInsets.all(20),
-
       decoration: buildCardDecoration(),
-
       child: Row(
         children: [
           Container(
@@ -183,10 +238,10 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Pet Information",
-                  style: TextStyle(
-                    fontSize: 17,
+                Text(
+                  pet.name,
+                  style: const TextStyle(
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
@@ -195,7 +250,16 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
                 const SizedBox(height: 6),
 
                 Text(
-                  "Weight: ${petWeight.toStringAsFixed(1)} kg",
+                  "${pet.type} • ${pet.breed}",
+                  style: const TextStyle(
+                    color: subtitleColor,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  "Age: ${pet.age} | Weight: ${pet.weight.toStringAsFixed(1)} kg",
                   style: const TextStyle(
                     color: subtitleColor,
                   ),
@@ -211,12 +275,9 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
   Widget buildInputCard() {
     return Container(
       padding: const EdgeInsets.all(20),
-
       decoration: buildCardDecoration(),
-
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-
         children: [
           const Text(
             "Food Details",
@@ -228,12 +289,6 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
           ),
 
           const SizedBox(height: 18),
-
-          buildTextField(
-            controller: foodNameController,
-            label: "Food Brand / Name",
-            icon: Icons.restaurant,
-          ),
 
           const SizedBox(height: 16),
 
@@ -279,16 +334,15 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
         onTap: () {
           setState(() {
             selectedActivity = title;
+            isCalculated = false;
           });
         },
-
         child: Container(
           height: 48,
           decoration: BoxDecoration(
             color: selected ? accentColor : const Color(0xFFF1F1EF),
             borderRadius: BorderRadius.circular(16),
           ),
-
           child: Center(
             child: Text(
               title,
@@ -350,9 +404,7 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
-
       decoration: buildCardDecoration(),
-
       child: Column(
         children: [
           CircleAvatar(
@@ -400,9 +452,7 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
-
       decoration: buildCardDecoration(),
-
       child: Row(
         children: [
           CircleAvatar(
@@ -449,12 +499,10 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
   Widget buildNoteCard() {
     return Container(
       padding: const EdgeInsets.all(18),
-
       decoration: BoxDecoration(
         color: const Color(0xFFFFF8E7),
         borderRadius: BorderRadius.circular(22),
       ),
-
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -490,34 +538,25 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
       controller: controller,
       keyboardType: keyboardType,
       style: const TextStyle(color: textColor),
-
       decoration: InputDecoration(
         prefixIcon: Icon(
           icon,
           color: accentColor,
         ),
-
         suffixText: suffix,
-
         suffixStyle: const TextStyle(
           color: subtitleColor,
         ),
-
         labelText: label,
-
         labelStyle: const TextStyle(
           color: subtitleColor,
         ),
-
         filled: true,
-
         fillColor: const Color(0xFFF4F4F2),
-
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 18,
         ),
-
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide.none,
@@ -530,7 +569,6 @@ class _FoodWaterScreenState extends State<FoodWaterScreen> {
     return BoxDecoration(
       color: cardColor,
       borderRadius: BorderRadius.circular(24),
-
       boxShadow: [
         BoxShadow(
           color: Colors.black.withOpacity(0.05),

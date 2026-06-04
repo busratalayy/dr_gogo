@@ -1,20 +1,93 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:dr_gogo/screens/pet_profile_screen.dart';
 import 'package:dr_gogo/screens/activity_screen.dart';
 import 'package:dr_gogo/screens/food_water_screen.dart';
 import 'package:dr_gogo/screens/location_screen.dart';
 import 'package:dr_gogo/screens/health_vaccine_screen.dart';
 import 'package:dr_gogo/screens/rest_monitoring_screen.dart';
+import 'package:dr_gogo/screens/alert_screen.dart';
+import 'package:dr_gogo/screens/login_screen.dart';
 import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
+import 'package:dr_gogo/screens/change_password_screen.dart';
 
+import '../controllers/profile_controller.dart';
+import '../models/pet_model.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   static const Color backgroundColor = Color(0xFFF7F4EF);
   static const Color cardColor = Color(0xFFFDFDFB);
   static const Color textColor = Color(0xFF1F1F1F);
   static const Color subtitleColor = Color(0xFF6E6E6E);
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final ProfileController _profileController = ProfileController();
+
+  late Future<PetModel?> _petFuture;
+
+  static const Color backgroundColor = DashboardScreen.backgroundColor;
+  static const Color cardColor = DashboardScreen.cardColor;
+  static const Color textColor = DashboardScreen.textColor;
+  static const Color subtitleColor = DashboardScreen.subtitleColor;
+
+  @override
+  void initState() {
+    super.initState();
+    _petFuture = _profileController.getCurrentPet();
+  }
+
+  void refreshDashboard() {
+    setState(() {
+      _petFuture = _profileController.getCurrentPet();
+    });
+  }
+
+  Future<void> logout() async {
+    await FirebaseAuth.instance.signOut();
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
+          (route) => false,
+    );
+  }
+
+  Future<void> sendPasswordResetEmail() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email;
+
+    if (email == null || email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No email address found for this account."),
+        ),
+      );
+      return;
+    }
+
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Password reset email sent to $email"),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +101,8 @@ class DashboardScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-
       backgroundColor: backgroundColor,
+      drawer: buildDrawer(),
       appBar: AppBar(
         backgroundColor: backgroundColor,
         elevation: 0,
@@ -43,35 +116,16 @@ class DashboardScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar:
-      const BottomNavBar(currentIndex: 0),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Hello, Luna 🐾",
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              "Monitor your pet’s health and activity",
-              style: TextStyle(
-                color: subtitleColor,
-                fontSize: 14,
-              ),
-            ),
+            buildPetHeader(),
             const SizedBox(height: 20),
-
             buildPulseCard(),
-
             const SizedBox(height: 22),
-
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -94,14 +148,15 @@ class DashboardScreen extends StatelessWidget {
                   ),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(24),
-                    onTap: () {
+                    onTap: () async {
                       if (item.title == "Pet Profile") {
-                        Navigator.push(
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const PetProfileScreen(),
                           ),
                         );
+                        refreshDashboard();
                       } else if (item.title == "Activity") {
                         Navigator.push(
                           context,
@@ -127,14 +182,16 @@ class DashboardScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RestMonitoringScreen(),
+                            builder: (context) =>
+                            const RestMonitoringScreen(),
                           ),
                         );
                       } else if (item.title == "Health & Vaccine") {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const HealthVaccineScreen(),
+                            builder: (context) =>
+                            const HealthVaccineScreen(),
                           ),
                         );
                       }
@@ -173,6 +230,264 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget buildDrawer() {
+    final String email = FirebaseAuth.instance.currentUser?.email ?? "";
+
+    return Drawer(
+      backgroundColor: backgroundColor,
+      child: SafeArea(
+        child: FutureBuilder<PetModel?>(
+          future: _petFuture,
+          builder: (context, snapshot) {
+            final pet = snapshot.data;
+
+            return Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(22),
+                  decoration: const BoxDecoration(
+                    color: cardColor,
+                  ),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 42,
+                        backgroundColor: backgroundColor,
+                        backgroundImage: pet != null && pet.imagePath.isNotEmpty
+                            ? FileImage(File(pet.imagePath))
+                            : null,
+                        child: pet == null || pet.imagePath.isEmpty
+                            ? const Icon(
+                          Icons.pets,
+                          color: Colors.teal,
+                          size: 42,
+                        )
+                            : null,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        pet?.name ?? "Dr. Gogo",
+                        style: const TextStyle(
+                          color: textColor,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        email,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: subtitleColor,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                buildDrawerItem(
+                  icon: Icons.pets,
+                  title: "Pet Profile",
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PetProfileScreen(),
+                      ),
+                    );
+                    refreshDashboard();
+                  },
+                ),
+
+                buildDrawerItem(
+                  icon: Icons.notifications_rounded,
+                  title: "Alerts",
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AlertsScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                buildDrawerItem(
+                  icon: Icons.lock_reset,
+                  title: "Change Password",
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChangePasswordScreen(),
+                      ),
+                    );
+                  },
+                ),
+
+                buildDrawerItem(
+                  icon: Icons.info_outline,
+                  title: "About Dr. Gogo",
+                  onTap: () {
+                    Navigator.pop(context);
+                    showAboutDialog(
+                      context: context,
+                      applicationName: "Dr. Gogo",
+                      applicationVersion: "1.0.0",
+                      applicationIcon: const Icon(
+                        Icons.pets,
+                        color: Colors.teal,
+                        size: 36,
+                      ),
+                      children: const [
+                        Text(
+                          "Dr. Gogo is a smart pet health monitoring application designed to support pet owners through health, activity, and location tracking.",
+                        ),
+                      ],
+                    );
+                  },
+                ),
+
+                const Spacer(),
+
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: logout,
+                      icon: const Icon(Icons.logout),
+                      label: const Text(
+                        "Logout",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: Colors.teal,
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Widget buildPetHeader() {
+    return FutureBuilder<PetModel?>(
+      future: _petFuture,
+      builder: (context, snapshot) {
+        final pet = snapshot.data;
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Row(
+            children: [
+              CircleAvatar(
+                radius: 29,
+                backgroundColor: Colors.grey.shade200,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: Colors.teal,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Text(
+                  "Loading pet information...",
+                  style: TextStyle(
+                    color: subtitleColor,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: cardColor,
+              backgroundImage: pet != null && pet.imagePath.isNotEmpty
+                  ? FileImage(File(pet.imagePath))
+                  : null,
+              child: pet == null || pet.imagePath.isEmpty
+                  ? const Icon(
+                Icons.pets,
+                color: Colors.teal,
+                size: 30,
+              )
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Hello, ${pet?.name ?? "Pet"} 🐾",
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    "Monitor your pet’s health and activity",
+                    style: TextStyle(
+                      color: subtitleColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -260,8 +575,8 @@ class DashboardScreen extends StatelessWidget {
               color: Colors.green.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Icon(
                   Icons.circle,
                   color: Colors.green,

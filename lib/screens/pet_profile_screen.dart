@@ -1,5 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
+
+import '../controllers/profile_controller.dart';
+import '../models/pet_model.dart';
+import 'create_pet_profile_screen.dart';
+import 'edit_pet_profile_screen.dart';
 
 class PetProfileScreen extends StatefulWidget {
   const PetProfileScreen({super.key});
@@ -9,25 +16,43 @@ class PetProfileScreen extends StatefulWidget {
 }
 
 class _PetProfileScreenState extends State<PetProfileScreen> {
+  final ProfileController _profileController = ProfileController();
+
   static const Color backgroundColor = Color(0xFFF7F4EF);
   static const Color cardColor = Color(0xFFFDFDFB);
   static const Color textColor = Color(0xFF1F1F1F);
   static const Color subtitleColor = Color(0xFF6E6E6E);
   static const Color accentColor = Color(0xFF6FAFA6);
 
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController breedController = TextEditingController();
-  final TextEditingController ageController = TextEditingController();
-  final TextEditingController weightController = TextEditingController();
+  late Future<PetModel?> _petFuture;
 
-  String selectedType = "Cat";
-  String selectedGender = "Female";
+  @override
+  void initState() {
+    super.initState();
+    _petFuture = _profileController.getCurrentPet();
+  }
+
+  void refreshPetProfile() {
+    setState(() {
+      _petFuture = _profileController.getCurrentPet();
+    });
+  }
+
+  void goToEditProfile(PetModel pet) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditPetProfileScreen(pet: pet),
+      ),
+    );
+
+    refreshPetProfile();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
-
       appBar: AppBar(
         title: const Text(
           "Pet Profile",
@@ -41,312 +66,295 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         foregroundColor: textColor,
         elevation: 0,
       ),
-      bottomNavigationBar:
-      const BottomNavBar(currentIndex: 0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-
-          children: [
-            const Text(
-              "Tell us about your pet 🐾",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: textColor,
+      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
+      body: FutureBuilder<PetModel?>(
+        future: _petFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(
+                color: accentColor,
               ),
-            ),
+            );
+          }
 
-            const SizedBox(height: 6),
-
-            const Text(
-              "This information helps Dr. Gogo personalize health and care suggestions.",
-              style: TextStyle(
-                fontSize: 14,
-                color: subtitleColor,
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text(
+                "An error occurred while loading pet profile.",
+                style: TextStyle(color: textColor),
               ),
-            ),
+            );
+          }
 
-            const SizedBox(height: 26),
+          final pet = snapshot.data;
 
-            Center(
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    width: 118,
-                    height: 118,
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
+          if (pet == null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
                       Icons.pets,
-                      size: 48,
+                      size: 72,
                       color: accentColor,
                     ),
-                  ),
-
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: const BoxDecoration(
-                      color: accentColor,
-                      shape: BoxShape.circle,
+                    const SizedBox(height: 18),
+                    const Text(
+                      "No Pet Profile Found",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 20,
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Create a pet profile to start monitoring your pet.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: subtitleColor,
+                        fontSize: 15,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CreatePetProfileScreen(),
+                          ),
+                        ).then((_) => refreshPetProfile());
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text("Create Pet Profile"),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            );
+          }
 
-            const SizedBox(height: 30),
-
-            buildTextField(
-              controller: nameController,
-              label: "Pet Name",
-              icon: Icons.badge_outlined,
-            ),
-
-            const SizedBox(height: 16),
-
-            buildTextField(
-              controller: breedController,
-              label: "Breed",
-              icon: Icons.category_outlined,
-            ),
-
-            const SizedBox(height: 16),
-
-            Row(
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: buildTextField(
-                    controller: ageController,
-                    label: "Age",
-                    icon: Icons.cake_outlined,
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                Expanded(
-                  child: buildTextField(
-                    controller: weightController,
-                    label: "Weight",
-                    icon: Icons.monitor_weight_outlined,
-                    keyboardType: TextInputType.number,
-                    suffix: "kg",
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 26),
-
-            buildSectionTitle("Pet Type"),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: buildSelectionButton(
-                    title: "Cat",
-                    icon: Icons.pets,
-                    selected: selectedType == "Cat",
-                    onTap: () {
-                      setState(() {
-                        selectedType = "Cat";
-                      });
-                    },
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                Expanded(
-                  child: buildSelectionButton(
-                    title: "Dog",
-                    icon: Icons.cruelty_free,
-                    selected: selectedType == "Dog",
-                    onTap: () {
-                      setState(() {
-                        selectedType = "Dog";
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 26),
-
-            buildSectionTitle("Gender"),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Expanded(
-                  child: buildSelectionButton(
-                    title: "Female",
-                    icon: Icons.female,
-                    selected: selectedGender == "Female",
-                    onTap: () {
-                      setState(() {
-                        selectedGender = "Female";
-                      });
-                    },
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                Expanded(
-                  child: buildSelectionButton(
-                    title: "Male",
-                    icon: Icons.male,
-                    selected: selectedGender == "Male",
-                    onTap: () {
-                      setState(() {
-                        selectedGender = "Male";
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 34),
-
-            SizedBox(
-              width: double.infinity,
-              height: 58,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                onPressed: () {},
-                child: const Text(
-                  "Save Profile",
+                const Text(
+                  "Your Pet Profile 🐾",
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: textColor,
                   ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                const Text(
+                  "View your pet’s saved information.",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: subtitleColor,
+                  ),
+                ),
+                const SizedBox(height: 26),
+
+                Center(
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        width: 128,
+                        height: 128,
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 18,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: pet.imagePath.isNotEmpty
+                            ? ClipOval(
+                          child: Image.file(
+                            File(pet.imagePath),
+                            width: 128,
+                            height: 128,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                            : const Icon(
+                          Icons.pets,
+                          size: 54,
+                          color: accentColor,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => goToEditProfile(pet),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: accentColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                Center(
+                  child: Text(
+                    pet.name,
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Center(
+                  child: Text(
+                    "${pet.type} • ${pet.breed}",
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: subtitleColor,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                buildInfoCard(
+                  icon: Icons.pets,
+                  title: "Pet Type",
+                  value: pet.type,
+                ),
+                buildInfoCard(
+                  icon: Icons.category_outlined,
+                  title: "Breed",
+                  value: pet.breed,
+                ),
+                buildInfoCard(
+                  icon: pet.gender == "Female" ? Icons.female : Icons.male,
+                  title: "Gender",
+                  value: pet.gender,
+                ),
+                buildInfoCard(
+                  icon: Icons.cake_outlined,
+                  title: "Age",
+                  value: "${pet.age} years old",
+                ),
+                buildInfoCard(
+                  icon: Icons.monitor_weight_outlined,
+                  title: "Weight",
+                  value: "${pet.weight} kg",
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: () => goToEditProfile(pet),
+                    icon: const Icon(Icons.edit),
+                    label: const Text(
+                      "Edit Pet Profile",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: textColor,
-      ),
-    );
-  }
-
-  Widget buildTextField({
-    required TextEditingController controller,
-    required String label,
+  Widget buildInfoCard({
     required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    String? suffix,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      style: const TextStyle(color: textColor),
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: accentColor),
-        suffixText: suffix,
-        suffixStyle: const TextStyle(color: subtitleColor),
-        labelText: label,
-        labelStyle: const TextStyle(color: subtitleColor),
-        filled: true,
-        fillColor: cardColor,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
-        ),
-      ),
-    );
-  }
-
-  Widget buildSelectionButton({
     required String title,
-    required IconData icon,
-    required bool selected,
-    required VoidCallback onTap,
+    required String value,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-
-      child: Container(
-        height: 58,
-        decoration: BoxDecoration(
-          color: selected ? accentColor : cardColor,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.13),
+              borderRadius: BorderRadius.circular(16),
             ),
-          ],
-        ),
-
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
+            child: Icon(
               icon,
-              color: selected ? Colors.white : accentColor,
-              size: 22,
+              color: accentColor,
+              size: 28,
             ),
-
-            const SizedBox(width: 8),
-
-            Text(
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
               title,
-              style: TextStyle(
-                color: selected ? Colors.white : textColor,
-                fontWeight: FontWeight.w600,
+              style: const TextStyle(
+                color: subtitleColor,
+                fontSize: 14,
               ),
             ),
-          ],
-        ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

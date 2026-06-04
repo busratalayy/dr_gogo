@@ -60,4 +60,43 @@ class ProfileService {
 
     return doc.data()?['profileCompleted'] == true;
   }
+  Future<PetModel?> getCurrentPet() async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      return null;
+    }
+
+    final query = await _firestore
+        .collection('pets')
+        .where('ownerId', isEqualTo: user.uid)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) {
+      return null;
+    }
+
+    return PetModel.fromMap(query.docs.first.data());
+  }
+  Future<void> updatePetProfile({
+    required String petId,
+    required String name,
+    required String type,
+    required String breed,
+    required int age,
+    required double weight,
+    required String gender,
+    String imagePath = '',
+  }) async {
+    await _firestore.collection('pets').doc(petId).update({
+      'name': name.trim(),
+      'type': type,
+      'breed': breed.trim(),
+      'age': age,
+      'weight': weight,
+      'gender': gender,
+      'imagePath': imagePath,
+    });
+  }
 }

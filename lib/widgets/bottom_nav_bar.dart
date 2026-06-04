@@ -20,8 +20,6 @@ class BottomNavBar extends StatelessWidget {
       currentIndex: currentIndex,
       type: BottomNavigationBarType.fixed,
       onTap: (index) {
-        if (index == currentIndex) return;
-
         if (index == 0) {
           Navigator.pushReplacement(
             context,
