@@ -13,6 +13,9 @@ import 'package:dr_gogo/screens/alert_screen.dart';
 import 'package:dr_gogo/screens/login_screen.dart';
 import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 import 'package:dr_gogo/screens/change_password_screen.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_core/firebase_core.dart';
+
 
 import '../controllers/profile_controller.dart';
 import '../models/pet_model.dart';
@@ -31,6 +34,11 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final ProfileController _profileController = ProfileController();
+  final DatabaseReference sensorRef = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL:
+    "https://dr-gogo-a2975-default-rtdb.europe-west1.firebasedatabase.app/",
+  ).ref("iot/sensorData");
 
   late Future<PetModel?> _petFuture;
 
@@ -492,109 +500,139 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget buildPulseCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.pink.shade100,
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: Colors.pink.shade50,
-              borderRadius: BorderRadius.circular(18),
+    return StreamBuilder<DatabaseEvent>(
+      stream: sensorRef.onValue,
+      builder: (context, snapshot) {
+        int heartRate = 0;
+
+        if (snapshot.hasData &&
+            snapshot.data!.snapshot.value != null) {
+          final data =
+          Map<dynamic, dynamic>.from(
+            snapshot.data!.snapshot.value as Map,
+          );
+
+          heartRate =
+              (data["heartRate"] ?? 0).toInt();
+        }
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.pink.shade100,
+              width: 1.2,
             ),
-            child: Icon(
-              Icons.favorite,
-              color: Colors.red.shade400,
-              size: 30,
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 16,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Average Pulse",
-                  style: TextStyle(
-                    color: subtitleColor,
-                    fontSize: 14,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: Colors.pink.shade50,
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Icon(
+                  Icons.favorite,
+                  color: Colors.red.shade400,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "118",
+                    const Text(
+                      "Live Pulse",
                       style: TextStyle(
-                        color: textColor,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                        color: subtitleColor,
+                        fontSize: 14,
                       ),
                     ),
-                    SizedBox(width: 6),
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        "BPM",
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                    const SizedBox(height: 4),
+
+                    Row(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          "$heartRate",
+                          style: const TextStyle(
+                            color: textColor,
+                            fontSize: 28,
+                            fontWeight:
+                            FontWeight.bold,
+                          ),
                         ),
+                        const SizedBox(width: 6),
+                        const Padding(
+                          padding:
+                          EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            "BPM",
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 15,
+                              fontWeight:
+                              FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              Container(
+                padding:
+                const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                  Colors.green.withOpacity(0.12),
+                  borderRadius:
+                  BorderRadius.circular(20),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.circle,
+                      color: Colors.green,
+                      size: 10,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      "LIVE",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight:
+                        FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.circle,
-                  color: Colors.green,
-                  size: 10,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  "Normal",
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
