@@ -5,10 +5,12 @@ import 'package:dr_gogo/screens/pet_profile_screen.dart';
 
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
+  final int notificationCount;
 
   const BottomNavBar({
     super.key,
     required this.currentIndex,
+    this.notificationCount = 0,
   });
 
   @override
@@ -43,13 +45,39 @@ class BottomNavBar extends StatelessWidget {
           );
         }
       },
-      items: const [
+      items:[
         BottomNavigationBarItem(
           icon: Icon(Icons.home_rounded),
           label: "Home",
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_rounded),
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.notifications_rounded),
+
+              if (notificationCount > 0)
+                Positioned(
+                  right: -8,
+                  top: -6,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      notificationCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           label: "Alerts",
         ),
         BottomNavigationBarItem(
