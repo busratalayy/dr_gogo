@@ -66,7 +66,7 @@ class _PetProfileScreenState extends State<PetProfileScreen> {
         foregroundColor: textColor,
         elevation: 0,
       ),
-      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
+      bottomNavigationBar: const BottomNavBar(currentIndex: 2),
       body: FutureBuilder<PetModel?>(
         future: _petFuture,
         builder: (context, snapshot) {

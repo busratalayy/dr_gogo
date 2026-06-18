@@ -22,12 +22,15 @@ class BottomNavBar extends StatelessWidget {
       currentIndex: currentIndex,
       type: BottomNavigationBarType.fixed,
       onTap: (index) {
+        if (index == currentIndex) return;
+
         if (index == 0) {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (context) => const DashboardScreen(),
             ),
+                (route) => false,
           );
         } else if (index == 1) {
           Navigator.pushReplacement(
@@ -45,8 +48,8 @@ class BottomNavBar extends StatelessWidget {
           );
         }
       },
-      items:[
-        BottomNavigationBarItem(
+      items: [
+        const BottomNavigationBarItem(
           icon: Icon(Icons.home_rounded),
           label: "Home",
         ),
@@ -55,7 +58,6 @@ class BottomNavBar extends StatelessWidget {
             clipBehavior: Clip.none,
             children: [
               const Icon(Icons.notifications_rounded),
-
               if (notificationCount > 0)
                 Positioned(
                   right: -8,
@@ -80,7 +82,7 @@ class BottomNavBar extends StatelessWidget {
           ),
           label: "Alerts",
         ),
-        BottomNavigationBarItem(
+        const BottomNavigationBarItem(
           icon: Icon(Icons.person_rounded),
           label: "Profile",
         ),

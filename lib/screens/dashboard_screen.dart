@@ -2,20 +2,19 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:dr_gogo/screens/pet_profile_screen.dart';
 import 'package:dr_gogo/screens/activity_screen.dart';
 import 'package:dr_gogo/screens/food_water_screen.dart';
 import 'package:dr_gogo/screens/location_screen.dart';
 import 'package:dr_gogo/screens/health_vaccine_screen.dart';
-import 'package:dr_gogo/screens/rest_monitoring_screen.dart';
 import 'package:dr_gogo/screens/alert_screen.dart';
 import 'package:dr_gogo/screens/login_screen.dart';
 import 'package:dr_gogo/widgets/bottom_nav_bar.dart';
 import 'package:dr_gogo/screens/change_password_screen.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_core/firebase_core.dart';
-
 
 import '../controllers/profile_controller.dart';
 import '../models/pet_model.dart';
@@ -34,6 +33,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final ProfileController _profileController = ProfileController();
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
   final DatabaseReference sensorRef = FirebaseDatabase.instanceFor(
     app: Firebase.app(),
     databaseURL:
@@ -47,10 +48,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   static const Color textColor = DashboardScreen.textColor;
   static const Color subtitleColor = DashboardScreen.subtitleColor;
 
+  String get ownerId => FirebaseAuth.instance.currentUser!.uid;
+
   @override
   void initState() {
     super.initState();
     _petFuture = _profileController.getCurrentPet();
+  }
+
+  int daysLeft(DateTime date) {
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    return dateOnly.difference(todayOnly).inDays;
   }
 
   void refreshDashboard() {
@@ -104,7 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       DashboardItem("Activity", Icons.pets, Colors.blue),
       DashboardItem("Food & Water", Icons.restaurant, Colors.orange),
       DashboardItem("Location", Icons.location_on, Colors.green),
-      DashboardItem("Rest Monitor", Icons.nightlight_round, Colors.indigo),
+      DashboardItem("Alerts", Icons.notifications_active, Colors.amber),
       DashboardItem("Health & Vaccine", Icons.health_and_safety, Colors.red),
     ];
 
@@ -124,7 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const BottomNavBar(currentIndex: 0),
+      bottomNavigationBar: buildDashboardBottomNavBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -186,12 +196,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             builder: (context) => const LocationScreen(),
                           ),
                         );
-                      } else if (item.title == "Rest Monitor") {
+                      } else if (item.title == "Alerts") {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                            const RestMonitoringScreen(),
+                            builder: (context) => const AlertsScreen(),
                           ),
                         );
                       } else if (item.title == "Health & Vaccine") {
@@ -241,6 +250,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget buildDashboardBottomNavBar() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: firestore
+          .collection("reminders")
+          .where("ownerId", isEqualTo: ownerId)
+          .snapshots(),
+      builder: (context, reminderSnapshot) {
+        final reminders = reminderSnapshot.data?.docs ?? [];
+
+        final unreadReminderCount = reminders.where((doc) {
+          final data = doc.data();
+          return data["isRead"] == false;
+        }).length;
+
+        return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: firestore
+              .collection("vaccines")
+              .where("ownerId", isEqualTo: ownerId)
+              .snapshots(),
+          builder: (context, vaccineSnapshot) {
+            final vaccines = vaccineSnapshot.data?.docs ?? [];
+
+            final upcomingVaccinesCount = vaccines.where((doc) {
+              final data = doc.data();
+              final next = data["next"];
+
+              if (next == null) return false;
+
+              final date = (next as Timestamp).toDate();
+              final days = daysLeft(date);
+
+              return days >= 0 && days <= 7;
+            }).length;
+
+            final notificationCount =
+                unreadReminderCount + upcomingVaccinesCount;
+
+            return BottomNavBar(
+              currentIndex: 0,
+              notificationCount: notificationCount,
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget buildDrawer() {
     final String email = FirebaseAuth.instance.currentUser?.email ?? "";
 
@@ -265,7 +321,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       CircleAvatar(
                         radius: 42,
                         backgroundColor: backgroundColor,
-                        backgroundImage: pet != null && pet.imagePath.isNotEmpty
+                        backgroundImage:
+                        pet != null && pet.imagePath.isNotEmpty
                             ? FileImage(File(pet.imagePath))
                             : null,
                         child: pet == null || pet.imagePath.isEmpty
@@ -297,9 +354,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 buildDrawerItem(
                   icon: Icons.pets,
                   title: "Pet Profile",
@@ -314,7 +369,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     refreshDashboard();
                   },
                 ),
-
                 buildDrawerItem(
                   icon: Icons.notifications_rounded,
                   title: "Alerts",
@@ -328,7 +382,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   },
                 ),
-
                 buildDrawerItem(
                   icon: Icons.lock_reset,
                   title: "Change Password",
@@ -342,7 +395,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   },
                 ),
-
                 buildDrawerItem(
                   icon: Icons.info_outline,
                   title: "About Dr. Gogo",
@@ -365,9 +417,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     );
                   },
                 ),
-
                 const Spacer(),
-
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: SizedBox(
@@ -505,15 +555,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, snapshot) {
         int heartRate = 0;
 
-        if (snapshot.hasData &&
-            snapshot.data!.snapshot.value != null) {
-          final data =
-          Map<dynamic, dynamic>.from(
+        if (snapshot.hasData && snapshot.data!.snapshot.value != null) {
+          final data = Map<dynamic, dynamic>.from(
             snapshot.data!.snapshot.value as Map,
           );
 
-          heartRate =
-              (data["heartRate"] ?? 0).toInt();
+          heartRate = (data["heartRate"] ?? 0).toInt();
         }
 
         return Container(
@@ -550,11 +597,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       "Live Pulse",
@@ -564,31 +609,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-
                     Row(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
                           "$heartRate",
                           style: const TextStyle(
                             color: textColor,
                             fontSize: 28,
-                            fontWeight:
-                            FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(width: 6),
                         const Padding(
-                          padding:
-                          EdgeInsets.only(bottom: 4),
+                          padding: EdgeInsets.only(bottom: 4),
                           child: Text(
                             "BPM",
                             style: TextStyle(
                               color: textColor,
                               fontSize: 15,
-                              fontWeight:
-                              FontWeight.w600,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -597,18 +637,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
-
               Container(
-                padding:
-                const EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color:
-                  Colors.green.withOpacity(0.12),
-                  borderRadius:
-                  BorderRadius.circular(20),
+                  color: Colors.green.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Row(
                   children: [
@@ -622,8 +658,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       "LIVE",
                       style: TextStyle(
                         color: Colors.green,
-                        fontWeight:
-                        FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],

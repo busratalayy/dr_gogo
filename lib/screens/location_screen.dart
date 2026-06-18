@@ -16,7 +16,6 @@ class _LocationScreenState extends State<LocationScreen> {
   static const Color cardColor = Color(0xFFFDFDFB);
   static const Color textColor = Color(0xFF1F1F1F);
   static const Color subtitleColor = Color(0xFF6E6E6E);
-  static const Color accentColor = Color(0xFF6FAFA6);
 
   final DatabaseReference gpsRef = FirebaseDatabase.instanceFor(
     app: Firebase.app(),
@@ -40,8 +39,6 @@ class _LocationScreenState extends State<LocationScreen> {
     gpsRef.onValue.listen((event) {
       final data = event.snapshot.value;
 
-      print("Firebase GPS data: $data");
-
       if (data == null) {
         return;
       }
@@ -51,9 +48,6 @@ class _LocationScreenState extends State<LocationScreen> {
 
         final latitude = double.tryParse(map["latitude"].toString());
         final longitude = double.tryParse(map["longitude"].toString());
-
-        print("Latitude: $latitude");
-        print("Longitude: $longitude");
 
         if (latitude == null || longitude == null) {
           return;
@@ -71,17 +65,9 @@ class _LocationScreenState extends State<LocationScreen> {
           CameraUpdate.newLatLngZoom(newLocation, 17),
         );
       } catch (e) {
-        print("GPS data parse error: $e");
+        debugPrint("GPS data parse error: $e");
       }
     });
-  }
-
-  void getTodayMovement(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Movement calculation will be added later."),
-      ),
-    );
   }
 
   @override
@@ -113,7 +99,6 @@ class _LocationScreenState extends State<LocationScreen> {
               ),
               onMapCreated: (controller) {
                 mapController = controller;
-
                 mapController?.animateCamera(
                   CameraUpdate.newLatLngZoom(petLocation, 16),
                 );
@@ -154,78 +139,6 @@ class _LocationScreenState extends State<LocationScreen> {
                     "Lat: ${petLocation.latitude.toStringAsFixed(6)}",
                     subtitle:
                     "Lng: ${petLocation.longitude.toStringAsFixed(6)}",
-                  ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: buildCardDecoration(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 54,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.13),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Icon(
-                                Icons.directions_walk,
-                                color: Colors.orange,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Today's Movement",
-                                    style: TextStyle(
-                                      color: textColor,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: 5),
-                                  Text(
-                                    "0.0 km",
-                                    style: TextStyle(
-                                      color: subtitleColor,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton.icon(
-                            onPressed: () => getTodayMovement(context),
-                            icon: const Icon(Icons.route),
-                            label: const Text(
-                              "Get Today's Movement",
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accentColor,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),

@@ -249,7 +249,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
               final date = (next as Timestamp).toDate();
               final days = daysLeft(date);
 
-              return days <= 7;
+              return days >= 0 && days <= 7;
             }).toList();
 
             final notificationCount =
